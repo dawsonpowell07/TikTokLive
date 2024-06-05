@@ -4,15 +4,12 @@ from dotenv import load_dotenv
 import os
 import time
 import csv
+from flask import Flask, request, url_for, session, redirect, render_template
 
 load_dotenv()
 
-
 client_id = os.getenv('CLIENT_ID')
 client_secret = os.getenv('CLIENT_SECRET')
-
-
-from flask import Flask, request, url_for, session, redirect
 
 app = Flask(__name__)
 
@@ -35,7 +32,6 @@ def redirect_page():
 
 @app.route('/saveTikTokLive')
 def save_tiktok_live(): 
-
     try:
         token_info = get_token()
     except:
@@ -56,6 +52,7 @@ def save_tiktok_live():
         return 'TikTok Live playlist not found'
     
     # Read song details from the CSV file and add them to the playlist
+    added_songs = []
     with open('song_details.csv', 'r', newline='', encoding='utf-8') as csvfile:
         reader = csv.DictReader(csvfile)
         existing_tracks = set(item['track']['uri'] for item in sp.playlist_tracks(tiktok_live_playlist_id)['items'])
@@ -72,12 +69,12 @@ def save_tiktok_live():
                 if song_uri not in existing_tracks:
                     sp.user_playlist_add_tracks(user_id, tiktok_live_playlist_id, [song_uri])
                     existing_tracks.add(song_uri)
+                    added_songs.append(f"{song_name} by {artist}")
 
-
+    if not added_songs:
+        return render_template('result.html', message="No new songs were added to your 'TikTok Live' playlist.")
     
-    return 'SUCCESS'
-
-
+    return render_template('result.html', message="The following songs were added to your 'TikTok Live' playlist:", songs=added_songs)
 
 def get_token():
     token_info = session.get(TOKEN_INFO, None)
@@ -87,7 +84,7 @@ def get_token():
     now = int(time.time())
 
     is_expired = token_info['expires_at'] - now < 60
-    if (is_expired):
+    if is_expired:
         spotify_oauth = create_spotify_oauth()
         token_info = spotify_oauth.refresh_access_token(token_info['refresh_token'])
 
@@ -97,7 +94,6 @@ def create_spotify_oauth():
     return SpotifyOAuth(client_id=client_id,
                         client_secret=client_secret,
                         redirect_uri=url_for('redirect_page', _external=True),
-                        scope = 'user-library-read playlist-modify-public playlist-modify-private'
-                        )
+                        scope='user-library-read playlist-modify-public playlist-modify-private')
 
 app.run(debug=True)
