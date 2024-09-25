@@ -5,6 +5,7 @@ import os
 import time
 import csv
 from flask import Flask, request, url_for, session, redirect, render_template
+from rapidfuzz import fuzz
 
 load_dotenv()
 
@@ -60,16 +61,35 @@ def save_tiktok_live():
         for row in reader:
             song_name = row['Song Name']
             artist = row['Artist']
-            query = f"track:{song_name} artist:{artist}"
-            results = sp.search(q=query, type='track', limit=1)
-            
-            if results['tracks']['items']:
-                song_uri = results['tracks']['items'][0]['uri']
-                
+            query = song_name  # Search using only the song name
+            results = sp.search(q=query, type='track', limit=10)
+
+            best_match = None
+            highest_score = 0
+
+            for item in results['tracks']['items']:
+                track_name = item['name']
+                track_artist = item['artists'][0]['name']
+
+                # Compute similarity scores
+                name_score = fuzz.ratio(song_name.lower(), track_name.lower())
+                artist_score = fuzz.ratio(artist.lower(), track_artist.lower())
+                total_score = (2 * name_score + artist_score) / 3  # Weighted average
+
+                if total_score > highest_score:
+                    highest_score = total_score
+                    best_match = item
+
+            # Set a threshold for accepting matches
+            if highest_score > 70:  # Adjust the threshold as needed
+                song_uri = best_match['uri']
                 if song_uri not in existing_tracks:
                     sp.user_playlist_add_tracks(user_id, tiktok_live_playlist_id, [song_uri])
                     existing_tracks.add(song_uri)
-                    added_songs.append(f"{song_name} by {artist}")
+                    added_songs.append(f"{best_match['name']} by {best_match['artists'][0]['name']}")
+            else:
+                # Could not find a good match
+                print(f"No good match found for {song_name} by {artist}")
 
     if not added_songs:
         return render_template('result.html', message="No new songs were added to your 'TikTok Live' playlist.")
