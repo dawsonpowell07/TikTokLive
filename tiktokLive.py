@@ -5,14 +5,12 @@ from TikTokLive.events import ConnectEvent, CommentEvent
 
 tikTokUser = input("Input the TikTok ID starting with @ sign: ")
 
-# "@oxxalate"
 # Create the client
 client: TikTokLiveClient = TikTokLiveClient(unique_id=tikTokUser)
 
 # Define field names for CSV
 fieldnames = ['Song Name', 'Artist']
 
-# Listen to an event with a decorator!
 @client.on(ConnectEvent)
 async def on_connect(event: ConnectEvent):
     print(f"Connected to @{event.unique_id} (Room ID: {client.room_id})")
@@ -36,6 +34,4 @@ async def on_comment(event: CommentEvent):
 client.add_listener(CommentEvent, on_comment)
 
 if __name__ == '__main__':
-    # Run the client and block the main thread
-    # await client.start() to run non-blocking
     client.run()
