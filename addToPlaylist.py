@@ -70,7 +70,7 @@ def save_tiktok_live():
     
     for playlist in current_playlist:
         # Save the playlist ID if found
-        if playlist['name'] == "TikTok Live":
+        if playlist['name'] == "Groove":
             tiktok_live_playlist_id = playlist['id']  
 
     # Return error if playlist doesn't exist
@@ -81,11 +81,15 @@ def save_tiktok_live():
     added_songs = []
     with open('song_details.csv', 'r', newline='', encoding='utf-8') as csvfile:
         
-        reader = csv.DictReader(csvfile)  
+        reader = csv.DictReader(csvfile)
         
         # Fetch existing playlist tracks
-        existing_tracks = set(item['track']['uri'] for item in sp.playlist_tracks(tiktok_live_playlist_id)['items'])  
-        
+        playlist_data = sp.playlist_tracks(tiktok_live_playlist_id)
+        playlist_items = playlist_data.get('items', [])  # Ensures it's a list even if 'items' is missing
+        existing_tracks = set(
+            item['track']['uri'] for item in playlist_items if item.get('track') and item['track'].get('uri')
+        )
+            
         for row in reader:
             song_name = row['Song Name']  # Extract song name
             artist = row['Artist']  # Extract artist name
